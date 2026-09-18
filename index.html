@@ -80,11 +80,11 @@
       width: clamp(55px, 12vw, 75px);
       height: clamp(55px, 12vw, 75px);
       border-radius: 50%;
-      background: linear-gradient(135deg, #007bff, #00ffcc);
+      background: linear-gradient(135deg, #ff69b4, #00ffcc);
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 0 15px rgba(0,255,204,0.4);
+      box-shadow: 0 0 15px rgba(255,105,180,0.4);
       flex-shrink: 0;
       transition: 0.3s;
       overflow: hidden;
@@ -136,13 +136,11 @@
     button.mic-btn { background: #e63946; }
     button:disabled { background: #444; cursor: not-allowed; }
 
-    /* Penyesuaian Khusus Desktop */
     @media (min-width: 768px) {
       #canvas-container { height: 48vh; }
       .mode-btn, button.action-btn { flex: 0 1 auto; }
     }
   </style>
-
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
@@ -182,7 +180,7 @@
     const renderer = new THREE.WebGLRenderer({ antialias: true });
 
     renderer.setSize(container.clientWidth, container.clientHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Menjaga performa HP
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     container.appendChild(renderer.domElement);
     camera.position.set(4, 4.5, 6.5);
     camera.lookAt(0, 0, 0);
@@ -254,7 +252,6 @@
     }
     animate();
 
-    // Resize Handler untuk Responsif Layar HP & PC
     window.addEventListener('resize', () => {
       const width = container.clientWidth;
       const height = container.clientHeight;
@@ -283,24 +280,24 @@
     let isSolvingActive = false;
 
     const moveExplanations = {
-      "U": "Putar Atas (White) searah jarum jam",
-      "U'": "Putar Atas (White) berlawanan jarum jam",
-      "D": "Putar Bawah (Yellow) searah jarum jam",
-      "D'": "Putar Bawah (Yellow) berlawanan jarum jam",
-      "L": "Putar Kiri (Orange) ke bawah",
-      "L'": "Putar Kiri (Orange) ke atas",
-      "R": "Putar Kanan (Red) ke atas",
-      "R'": "Putar Kanan (Red) ke bawah",
-      "F": "Putar Depan (Green) searah jarum jam",
-      "F'": "Putar Depan (Green) berlawanan jarum jam",
-      "B": "Putar Belakang (Blue) searah jarum jam",
-      "B'": "Putar Belakang (Blue) berlawanan jarum jam",
+      "U": "Putar Atas searah jarum jam",
+      "U'": "Putar Atas berlawanan jarum jam",
+      "D": "Putar Bawah searah jarum jam",
+      "D'": "Putar Bawah berlawanan jarum jam",
+      "L": "Putar Kiri ke bawah",
+      "L'": "Putar Kiri ke atas",
+      "R": "Putar Kanan ke atas",
+      "R'": "Putar Kanan ke bawah",
+      "F": "Putar Depan searah jarum jam",
+      "F'": "Putar Depan berlawanan jarum jam",
+      "B": "Putar Belakang searah jarum jam",
+      "B'": "Putar Belakang berlawanan jarum jam",
       "Uw": "Putar 2 Layer Atas",
-      "Uw'": "Putar 2 Layer Atas (Berlawanan)",
+      "Uw'": "Putar 2 Layer Atas berlawanan",
       "Rw": "Putar 2 Layer Kanan ke Atas",
       "Rw'": "Putar 2 Layer Kanan ke Bawah",
       "Fw": "Putar 2 Layer Depan",
-      "Fw'": "Putar 2 Layer Depan (Berlawanan)"
+      "Fw'": "Putar 2 Layer Depan berlawanan"
     };
 
     function rotateLayer(axis, layerValue, dir) {
@@ -370,7 +367,18 @@
       }
     }
 
-    // --- 3. SPEECH & VOICE RECOGNITION ---
+    // --- 3. SPEECH & VOICE RECOGNITION (FEMALE VOICE CONFIG) ---
+    let voices = [];
+    function loadVoices() {
+      if ('speechSynthesis' in window) {
+        voices = window.speechSynthesis.getVoices();
+      }
+    }
+    loadVoices();
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.onvoiceschanged = loadVoices;
+    }
+
     function aiSpeak(text, onEndCallback = null) {
       document.getElementById('speech-bubble').innerText = text;
       const avatar = document.getElementById('avatar');
@@ -380,6 +388,17 @@
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.lang = 'id-ID';
         utterance.rate = 1.0;
+        utterance.pitch = 1.25; // Pitch lebih tinggi agar terdengar suara cewek
+
+        // Prioritaskan voice wanita / Indonesian female
+        const femaleVoice = voices.find(v => 
+          (v.lang.includes('id') || v.lang.includes('ID')) && 
+          (v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('gadis') || v.name.toLowerCase().includes('wanita'))
+        ) || voices.find(v => v.lang.includes('id') || v.lang.includes('ID'));
+
+        if (femaleVoice) {
+          utterance.voice = femaleVoice;
+        }
 
         utterance.onstart = () => avatar.classList.add('speaking');
         utterance.onend = () => {
@@ -409,7 +428,7 @@
       recognition.onresult = (event) => {
         const rawTranscript = event.results[0][0].transcript.toLowerCase();
         document.getElementById('avatar').classList.remove('listening');
-        document.getElementById('status-title').innerText = "AI ASSISTANT:";
+        document.getElementById('status-title').innerText = "Anggun Bunga:";
 
         const transcript = rawTranscript.replace(/\*/g, 'x');
 
@@ -437,7 +456,7 @@
 
       recognition.onerror = (event) => {
         document.getElementById('avatar').classList.remove('listening');
-        document.getElementById('status-title').innerText = "AI ASSISTANT:";
+        document.getElementById('status-title').innerText = "Anggun Bunga:";
         console.error("Speech Recognition Error:", event.error);
       };
 
@@ -465,8 +484,7 @@
       let MOVES;
       if (currentMode === 3) MOVES = ["U", "D", "L", "R", "F", "B"];
       else if (currentMode === 2) MOVES = ["U", "R", "F"];
-      else if (currentMode === 4) MOVES = ["U", "D", "L", "R", "F", "B", "Uw", "Rw", "Fw"];
-      else if (currentMode === 5) MOVES = ["U", "D", "L", "R", "F", "B", "Uw", "Rw", "Fw"];
+      else if (currentMode === 4 || currentMode === 5) MOVES = ["U", "D", "L", "R", "F", "B", "Uw", "Rw", "Fw"];
 
       scrambleHistory = [];
       const count = currentMode === 5 ? 10 : (currentMode === 4 ? 8 : (currentMode === 3 ? 5 : 4));
