@@ -41,7 +41,7 @@
       max-width: 600px;
     }
 
-    .mode-btn { 
+    .mode-btn {
       background: #222; 
       border: 1px solid #444; 
       color: #aaa; 
@@ -136,13 +136,14 @@
     button.mic-btn { background: #e63946; }
     button:disabled { background: #444; cursor: not-allowed; }
 
+    /* Penyesuaian Khusus Desktop */
     @media (min-width: 768px) {
       #canvas-container { height: 48vh; }
       .mode-btn, button.action-btn { flex: 0 1 auto; }
     }
   </style>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="three.min.js"></script>
 </head>
 <body>
 
@@ -181,7 +182,7 @@
     const renderer = new THREE.WebGLRenderer({ antialias: true });
 
     renderer.setSize(container.clientWidth, container.clientHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Menjaga performa HP
     container.appendChild(renderer.domElement);
     camera.position.set(4, 4.5, 6.5);
     camera.lookAt(0, 0, 0);
@@ -253,6 +254,7 @@
     }
     animate();
 
+    // Resize Handler untuk Responsif Layar HP & PC
     window.addEventListener('resize', () => {
       const width = container.clientWidth;
       const height = container.clientHeight;
@@ -368,43 +370,7 @@
       }
     }
 
-    // --- 3. SPEECH & VOICE RECOGNITION (CEWE OPTIMIZED) ---
-    let availableVoices = [];
-    function loadVoices() {
-      if ('speechSynthesis' in window) {
-        availableVoices = window.speechSynthesis.getVoices();
-      }
-    }
-    loadVoices();
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.onvoiceschanged = loadVoices;
-    }
-
-    function getFemaleVoice() {
-      if (availableVoices.length === 0) loadVoices();
-
-      // Prioritas 1: Bahasa Indonesia khusus cewe (Gadis / Putri / Google ID)
-      const idFemale = availableVoices.find(v => 
-        (v.lang.includes('id') || v.lang.includes('ID')) && 
-        (v.name.toLowerCase().includes('female') || 
-         v.name.toLowerCase().includes('gadis') || 
-         v.name.toLowerCase().includes('putri') || 
-         v.name.toLowerCase().includes('google bahasa indonesia'))
-      );
-      if (idFemale) return idFemale;
-
-      // Prioritas 2: Semua suara bahasa Indonesia
-      const idVoice = availableVoices.find(v => v.lang.includes('id') || v.lang.includes('ID'));
-      if (idVoice) return idVoice;
-
-      // Prioritas 3: Suara cewe default sistem (Zira / Samantha)
-      return availableVoices.find(v => 
-        v.name.toLowerCase().includes('zira') || 
-        v.name.toLowerCase().includes('samantha') || 
-        v.name.toLowerCase().includes('female')
-      ) || null;
-    }
-
+    // --- 3. SPEECH & VOICE RECOGNITION ---
     function aiSpeak(text, onEndCallback = null) {
       document.getElementById('speech-bubble').innerText = text;
       const avatar = document.getElementById('avatar');
@@ -413,13 +379,6 @@
         window.speechSynthesis.cancel();
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.lang = 'id-ID';
-        
-        const selectedVoice = getFemaleVoice();
-        if (selectedVoice) {
-          utterance.voice = selectedVoice;
-        }
-
-        utterance.pitch = 1.25; // Dinaikkan ke 1.25 agar suara cewe terdengar ramah & jernih
         utterance.rate = 1.0;
 
         utterance.onstart = () => avatar.classList.add('speaking');
