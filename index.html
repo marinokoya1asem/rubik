@@ -41,7 +41,7 @@
       max-width: 600px;
     }
 
-    .mode-btn {
+    .mode-btn { 
       background: #222; 
       border: 1px solid #444; 
       color: #aaa; 
@@ -80,11 +80,11 @@
       width: clamp(55px, 12vw, 75px);
       height: clamp(55px, 12vw, 75px);
       border-radius: 50%;
-      background: linear-gradient(135deg, #ff69b4, #00ffcc);
+      background: linear-gradient(135deg, #007bff, #00ffcc);
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 0 15px rgba(255,105,180,0.4);
+      box-shadow: 0 0 15px rgba(0,255,204,0.4);
       flex-shrink: 0;
       transition: 0.3s;
       overflow: hidden;
@@ -141,6 +141,7 @@
       .mode-btn, button.action-btn { flex: 0 1 auto; }
     }
   </style>
+
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
@@ -172,7 +173,7 @@
     <button id="btnSolve" class="action-btn" onclick="runSolver()">Selesaikan (Step-by-Step)</button>
   </div>
 
-<script>
+  <script>
     // --- 1. THREE.JS SCENE SETUP ---
     const container = document.getElementById('canvas-container');
     const scene = new THREE.Scene();
@@ -261,7 +262,6 @@
     });
 
     function switchRubikMode(mode) {
-      unlockAudio();
       if (isSolvingActive) return;
       currentMode = mode;
       scrambleHistory = [];
@@ -276,29 +276,29 @@
       aiSpeak(`Mode diubah ke Rubik ${mode}x${mode}. Silakan acak kembali.`);
     }
 
-    // --- 2. ROTASI LAYER ---
+    // --- 2. LOGIKA ROTASI LAYER ---
     let scrambleHistory = [];
     let isSolvingActive = false;
 
     const moveExplanations = {
-      "U": "Putar Atas searah jarum jam",
-      "U'": "Putar Atas berlawanan jarum jam",
-      "D": "Putar Bawah searah jarum jam",
-      "D'": "Putar Bawah berlawanan jarum jam",
-      "L": "Putar Kiri ke bawah",
-      "L'": "Putar Kiri ke atas",
-      "R": "Putar Kanan ke atas",
-      "R'": "Putar Kanan ke bawah",
-      "F": "Putar Depan searah jarum jam",
-      "F'": "Putar Depan berlawanan jarum jam",
-      "B": "Putar Belakang searah jarum jam",
-      "B'": "Putar Belakang berlawanan jarum jam",
+      "U": "Putar Atas (White) searah jarum jam",
+      "U'": "Putar Atas (White) berlawanan jarum jam",
+      "D": "Putar Bawah (Yellow) searah jarum jam",
+      "D'": "Putar Bawah (Yellow) berlawanan jarum jam",
+      "L": "Putar Kiri (Orange) ke bawah",
+      "L'": "Putar Kiri (Orange) ke atas",
+      "R": "Putar Kanan (Red) ke atas",
+      "R'": "Putar Kanan (Red) ke bawah",
+      "F": "Putar Depan (Green) searah jarum jam",
+      "F'": "Putar Depan (Green) berlawanan jarum jam",
+      "B": "Putar Belakang (Blue) searah jarum jam",
+      "B'": "Putar Belakang (Blue) berlawanan jarum jam",
       "Uw": "Putar 2 Layer Atas",
-      "Uw'": "Putar 2 Layer Atas berlawanan",
+      "Uw'": "Putar 2 Layer Atas (Berlawanan)",
       "Rw": "Putar 2 Layer Kanan ke Atas",
       "Rw'": "Putar 2 Layer Kanan ke Bawah",
       "Fw": "Putar 2 Layer Depan",
-      "Fw'": "Putar 2 Layer Depan berlawanan"
+      "Fw'": "Putar 2 Layer Depan (Berlawanan)"
     };
 
     function rotateLayer(axis, layerValue, dir) {
@@ -368,27 +368,11 @@
       }
     }
 
-    // --- 3. SPEECH SYNTHESIS & AUDIO UNLOCKER ---
-    let voices = [];
-    let audioUnlocked = false;
-    let fallbackAudio = new Audio();
-
-    function unlockAudio() {
-      if (audioUnlocked) return;
-      if ('speechSynthesis' in window) {
-        window.speechSynthesis.resume();
-        const silent = new SpeechSynthesisUtterance('');
-        window.speechSynthesis.speak(silent);
-      }
-      audioUnlocked = true;
-    }
-
-    document.addEventListener('click', unlockAudio, { once: true });
-    document.addEventListener('touchstart', unlockAudio, { once: true });
-
+    // --- 3. SPEECH & VOICE RECOGNITION (CEWE OPTIMIZED) ---
+    let availableVoices = [];
     function loadVoices() {
       if ('speechSynthesis' in window) {
-        voices = window.speechSynthesis.getVoices();
+        availableVoices = window.speechSynthesis.getVoices();
       }
     }
     loadVoices();
@@ -396,75 +380,60 @@
       window.speechSynthesis.onvoiceschanged = loadVoices;
     }
 
+    function getFemaleVoice() {
+      if (availableVoices.length === 0) loadVoices();
+
+      // Prioritas 1: Bahasa Indonesia khusus cewe (Gadis / Putri / Google ID)
+      const idFemale = availableVoices.find(v => 
+        (v.lang.includes('id') || v.lang.includes('ID')) && 
+        (v.name.toLowerCase().includes('female') || 
+         v.name.toLowerCase().includes('gadis') || 
+         v.name.toLowerCase().includes('putri') || 
+         v.name.toLowerCase().includes('google bahasa indonesia'))
+      );
+      if (idFemale) return idFemale;
+
+      // Prioritas 2: Semua suara bahasa Indonesia
+      const idVoice = availableVoices.find(v => v.lang.includes('id') || v.lang.includes('ID'));
+      if (idVoice) return idVoice;
+
+      // Prioritas 3: Suara cewe default sistem (Zira / Samantha)
+      return availableVoices.find(v => 
+        v.name.toLowerCase().includes('zira') || 
+        v.name.toLowerCase().includes('samantha') || 
+        v.name.toLowerCase().includes('female')
+      ) || null;
+    }
+
     function aiSpeak(text, onEndCallback = null) {
       document.getElementById('speech-bubble').innerText = text;
       const avatar = document.getElementById('avatar');
 
-      // Stop audio sebelumnya jika sedang bicara
-      fallbackAudio.pause();
       if ('speechSynthesis' in window) {
         window.speechSynthesis.cancel();
-        window.speechSynthesis.resume();
-      }
-
-      // Cari suara perempuan Indonesia di perangkat
-      let selectedVoice = voices.find(v => 
-        (v.lang.includes('id') || v.lang.includes('ID')) && 
-        (v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('gadis') || v.name.toLowerCase().includes('wanita'))
-      ) || voices.find(v => v.lang.includes('id') || v.lang.includes('ID'));
-
-      // Jika browser mendukung TTS dan punya suara lokal
-      if ('speechSynthesis' in window && (selectedVoice || voices.length > 0)) {
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.lang = 'id-ID';
-        utterance.rate = 1.0;
-        utterance.pitch = 1.3; // Pitch cewek
+        
+        const selectedVoice = getFemaleVoice();
+        if (selectedVoice) {
+          utterance.voice = selectedVoice;
+        }
 
-        if (selectedVoice) utterance.voice = selectedVoice;
+        utterance.pitch = 1.25; // Dinaikkan ke 1.25 agar suara cewe terdengar ramah & jernih
+        utterance.rate = 1.0;
 
         utterance.onstart = () => avatar.classList.add('speaking');
         utterance.onend = () => {
           avatar.classList.remove('speaking');
           if (onEndCallback) onEndCallback();
         };
-        utterance.onerror = () => {
-          avatar.classList.remove('speaking');
-          playOnlineVoice(text, onEndCallback);
-        };
 
         window.speechSynthesis.speak(utterance);
-      } else {
-        // Fallback suara cewek online jika browser HP/PC tidak punya modul bahasa ID
-        playOnlineVoice(text, onEndCallback);
+      } else if (onEndCallback) {
+        setTimeout(onEndCallback, 2000);
       }
     }
 
-    // Generator suara cewek online (Google TTS CDN)
-    function playOnlineVoice(text, onEndCallback) {
-      const avatar = document.getElementById('avatar');
-      const cleanText = encodeURIComponent(text);
-      const url = `https://translate.google.com/translate_tts?ie=UTF-8&tl=id&client=tw-ob&q=${cleanText}`;
-      
-      fallbackAudio.src = url;
-      avatar.classList.add('speaking');
-
-      fallbackAudio.onended = () => {
-        avatar.classList.remove('speaking');
-        if (onEndCallback) onEndCallback();
-      };
-
-      fallbackAudio.onerror = () => {
-        avatar.classList.remove('speaking');
-        if (onEndCallback) setTimeout(onEndCallback, 1000);
-      };
-
-      fallbackAudio.play().catch(() => {
-        avatar.classList.remove('speaking');
-        if (onEndCallback) setTimeout(onEndCallback, 800);
-      });
-    }
-
-    // --- 4. SPEECH RECOGNITION ---
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     let recognition = SpeechRecognition ? new SpeechRecognition() : null;
 
@@ -481,7 +450,7 @@
       recognition.onresult = (event) => {
         const rawTranscript = event.results[0][0].transcript.toLowerCase();
         document.getElementById('avatar').classList.remove('listening');
-        document.getElementById('status-title').innerText = "Anggun Bunga:";
+        document.getElementById('status-title').innerText = "AI ASSISTANT:";
 
         const transcript = rawTranscript.replace(/\*/g, 'x');
 
@@ -503,13 +472,14 @@
         } else if (transcript.includes('selesai') || transcript.includes('solusi') || transcript.includes('selesaikan')) {
           runSolver();
         } else {
-          aiSpeak(`Kamu bilang "${rawTranscript}". Coba katakan "acak", "tiga kali tiga", atau "selesaikan".`);
+          aiSpeak(`Kamu bilang "${rawTranscript}". Coba katakan "Rubik lima kali lima", "tiga kali tiga", atau "acak".`);
         }
       };
 
       recognition.onerror = (event) => {
         document.getElementById('avatar').classList.remove('listening');
-        document.getElementById('status-title').innerText = "Anggun Bunga:";
+        document.getElementById('status-title').innerText = "AI ASSISTANT:";
+        console.error("Speech Recognition Error:", event.error);
       };
 
       recognition.onend = () => {
@@ -518,8 +488,7 @@
     }
 
     function toggleListening() {
-      unlockAudio();
-      if (!recognition) return alert("Browser tidak mendukung Speech Recognition.");
+      if (!recognition) return alert("Browser tidak mendukung Web Speech API.");
       if (!isSolvingActive) {
         try {
           recognition.start();
@@ -530,15 +499,15 @@
       }
     }
 
-    // --- 5. CONTROLLER LOGIC ---
+    // --- 4. CONTROLLER LOGIC ---
     function scrambleRubik() {
-      unlockAudio();
       if (isSolvingActive) return;
       
       let MOVES;
       if (currentMode === 3) MOVES = ["U", "D", "L", "R", "F", "B"];
       else if (currentMode === 2) MOVES = ["U", "R", "F"];
-      else if (currentMode === 4 || currentMode === 5) MOVES = ["U", "D", "L", "R", "F", "B", "Uw", "Rw", "Fw"];
+      else if (currentMode === 4) MOVES = ["U", "D", "L", "R", "F", "B", "Uw", "Rw", "Fw"];
+      else if (currentMode === 5) MOVES = ["U", "D", "L", "R", "F", "B", "Uw", "Rw", "Fw"];
 
       scrambleHistory = [];
       const count = currentMode === 5 ? 10 : (currentMode === 4 ? 8 : (currentMode === 3 ? 5 : 4));
@@ -549,11 +518,10 @@
         executeMove(randomMove);
       }
 
-      aiSpeak(`Rubik ${currentMode}x${currentMode} berhasil diacak.`);
+      aiSpeak(`Rubik ${currentMode}x${currentMode} berhasil diacak dengan ${count} langkah.`);
     }
 
     function runSolver() {
-      unlockAudio();
       if (scrambleHistory.length === 0) {
         aiSpeak("Rubik ini sudah dalam keadaan selesai!");
         return;
@@ -576,14 +544,14 @@
       scrambleHistory = [];
       isSolvingActive = true;
 
-      aiSpeak(`Ada ${solutionMoves.length} langkah. Mari kita selesaikan.`, () => {
+      aiSpeak(`Ada ${solutionMoves.length} langkah penyelesaian. Mari kita mulai.`, () => {
         executeStep(solutionMoves, 0);
       });
     }
 
     function executeStep(moves, index) {
       if (index >= moves.length) {
-        aiSpeak("Hore! Rubik sudah berhasil kembali ke kondisi awal!");
+        aiSpeak("Hore! Rubik sudah berhasil kembali sempurna ke kondisi awal!");
         isSolvingActive = false;
         return;
       }
