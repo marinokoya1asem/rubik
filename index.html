@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rubik Guide</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body { 
+      margin: 0; 
+      padding: 10px;
+      background: #121212; 
+      color: #fff; 
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+      text-align: center; 
+      overflow-x: hidden;
+    }
+
+    h1 {
+      font-size: clamp(1.2rem, 4vw, 2rem);
+      margin: 10px 0;
+    }
+
+    #canvas-container { 
+      width: 100%; 
+      height: 40vh; 
+      min-height: 250px;
+      max-height: 500px;
+      position: relative;
+    }
+    
+    .mode-selector { 
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 10px auto; 
+      max-width: 600px;
+    }
+
+    .mode-btn {
+      background: #222; 
+      border: 1px solid #444; 
+      color: #aaa; 
+      padding: 8px 14px; 
+      font-size: clamp(12px, 2.5vw, 14px); 
+      border-radius: 6px; 
+      cursor: pointer; 
+      transition: 0.3s;
+      flex: 1 1 auto;
+      min-width: 80px;
+    }
+
+    .mode-btn.active { 
+      background: #007bff; 
+      color: #fff; 
+      border-color: #007bff; 
+      font-weight: bold; 
+    }
+
+    .assistant-card {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      background: #1e1e1e;
+      width: 100%;
+      max-width: 550px;
+      margin: 10px auto;
+      padding: 12px 15px;
+      border-radius: 12px;
+      border: 1px solid #333;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    }
+    
+    .avatar-box {
+      width: clamp(55px, 12vw, 75px);
+      height: clamp(55px, 12vw, 75px);
+      border-radius: 50%;
+      background: linear-gradient(135deg, #007bff, #00ffcc);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 15px rgba(0,255,204,0.4);
+      flex-shrink: 0;
+      transition: 0.3s;
+      overflow: hidden;
+    }
+
+    .avatar-box img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 50%;
+    }
+
+    .avatar-box.speaking { animation: pulse 0.8s infinite alternate; }
+    .avatar-box.listening { background: linear-gradient(135deg, #ff0055, #ffcc00); animation: pulse 0.5s infinite alternate; }
+
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      100% { transform: scale(1.08); }
+    }
+
+    .info-text { text-align: left; flex-grow: 1; }
+    .info-text h4 { margin: 0 0 4px 0; color: #00ffcc; font-size: clamp(12px, 2.5vw, 14px); }
+    .info-text p { margin: 0; font-size: clamp(12px, 2.8vw, 14px); line-height: 1.4; }
+
+    .controls { 
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 10px 0; 
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    button.action-btn { 
+      padding: 10px 16px; 
+      font-size: clamp(12px, 2.5vw, 14px); 
+      font-weight: bold; 
+      cursor: pointer; 
+      border-radius: 8px; 
+      border: none; 
+      background: #007bff; 
+      color: white; 
+      flex: 1 1 auto;
+      min-width: 130px;
+      transition: background 0.2s;
+    }
+
+    button.mic-btn { background: #e63946; }
+    button:disabled { background: #444; cursor: not-allowed; }
+
+    /* Penyesuaian Khusus Desktop */
+    @media (min-width: 768px) {
+      #canvas-container { height: 48vh; }
+      .mode-btn, button.action-btn { flex: 0 1 auto; }
+    }
+  </style>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+
+  <h1 id="title-display">Rubik 3x3 Guide</h1>
+  
+  <div class="mode-selector">
+    <button id="btn2x2" class="mode-btn" onclick="switchRubikMode(2)">Rubik 2x2</button>
+    <button id="btn3x3" class="mode-btn active" onclick="switchRubikMode(3)">Rubik 3x3</button>
+    <button id="btn4x4" class="mode-btn" onclick="switchRubikMode(4)">Rubik 4x4</button>
+    <button id="btn5x5" class="mode-btn" onclick="switchRubikMode(5)">Rubik 5x5</button>
+  </div>
+
+  <div id="canvas-container"></div>
+
+  <div class="assistant-card">
+    <div id="avatar" class="avatar-box">
+      <img src="avatar.png" alt="AI Avatar" onerror="this.style.display='none'">
+    </div>
+    <div class="info-text">
+      <h4 id="status-title">Anggun Bunga:</h4>
+      <p id="speech-bubble">Halo! Tekan <b>Acak</b> lalu <b>Selesaikan</b> atau bicara langsung ke saya!</p>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button id="micBtn" class="action-btn mic-btn" onclick="toggleListening()">🎤 Bicara Sama AI</button>
+    <button id="btnScramble" class="action-btn" onclick="scrambleRubik()">Acak Rubik</button>
+    <button id="btnSolve" class="action-btn" onclick="runSolver()">Selesaikan (Step-by-Step)</button>
+  </div>
+
+  <script>
+    // --- 1. THREE.JS SCENE SETUP ---
+    const container = document.getElementById('canvas-container');
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(50, container.clientWidth / container.clientHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+
+    renderer.setSize(container.clientWidth, container.clientHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Menjaga performa HP
+    container.appendChild(renderer.domElement);
+    camera.position.set(4, 4.5, 6.5);
+    camera.lookAt(0, 0, 0);
+
+    scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.5);
+    dirLight.position.set(5, 10, 7);
+    scene.add(dirLight);
+
+    const rubikGroup = new THREE.Group();
+    scene.add(rubikGroup);
+
+    const materials = [
+      new THREE.MeshLambertMaterial({ color: 0xb7121f }), // Kanan (Merah)
+      new THREE.MeshLambertMaterial({ color: 0xff5800 }), // Kiri (Orange)
+      new THREE.MeshLambertMaterial({ color: 0xffffff }), // Atas (Putih)
+      new THREE.MeshLambertMaterial({ color: 0xffd500 }), // Bawah (Kuning)
+      new THREE.MeshLambertMaterial({ color: 0x009b48 }), // Depan (Hijau)
+      new THREE.MeshLambertMaterial({ color: 0x0046ad })  // Belakang (Biru)
+    ];
+
+    const cubelets = [];
+    let currentMode = 3;
+
+    function initRubik(size = 3) {
+      while(rubikGroup.children.length > 0) { rubikGroup.remove(rubikGroup.children[0]); }
+      cubelets.length = 0;
+
+      let cubeSize, coords;
+      if (size === 3) {
+        cubeSize = 0.96;
+        coords = [-1, 0, 1];
+      } else if (size === 2) {
+        cubeSize = 1.15;
+        coords = [-0.6, 0.6];
+      } else if (size === 4) {
+        cubeSize = 0.75;
+        coords = [-1.2, -0.4, 0.4, 1.2];
+      } else if (size === 5) {
+        cubeSize = 0.62;
+        coords = [-1.3, -0.65, 0, 0.65, 1.3];
+      }
+
+      const geometry = new THREE.BoxGeometry(cubeSize, cubeSize, cubeSize);
+
+      for (let x of coords) {
+        for (let y of coords) {
+          for (let z of coords) {
+            if (size === 3 && x === 0 && y === 0 && z === 0) continue;
+            if (size === 4 && Math.abs(x) < 0.5 && Math.abs(y) < 0.5 && Math.abs(z) < 0.5) continue;
+            if (size === 5 && Math.abs(x) < 0.1 && Math.abs(y) < 0.1 && Math.abs(z) < 0.1) continue;
+            
+            const mesh = new THREE.Mesh(geometry, materials);
+            mesh.position.set(x, y, z);
+            rubikGroup.add(mesh);
+            cubelets.push(mesh);
+          }
+        }
+      }
+      rubikGroup.rotation.set(0, 0, 0);
+    }
+
+    initRubik(3);
+
+    function animate() {
+      requestAnimationFrame(animate);
+      rubikGroup.rotation.y += 0.003;
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    // Resize Handler untuk Responsif Layar HP & PC
+    window.addEventListener('resize', () => {
+      const width = container.clientWidth;
+      const height = container.clientHeight;
+      camera.aspect = width / height;
+      camera.updateProjectionMatrix();
+      renderer.setSize(width, height);
+    });
+
+    function switchRubikMode(mode) {
+      if (isSolvingActive) return;
+      currentMode = mode;
+      scrambleHistory = [];
+      
+      document.getElementById('btn2x2').classList.toggle('active', mode === 2);
+      document.getElementById('btn3x3').classList.toggle('active', mode === 3);
+      document.getElementById('btn4x4').classList.toggle('active', mode === 4);
+      document.getElementById('btn5x5').classList.toggle('active', mode === 5);
+      document.getElementById('title-display').innerText = `Rubik ${mode}x${mode} Guide`;
+
+      initRubik(mode);
+      aiSpeak(`Mode diubah ke Rubik ${mode}x${mode}. Silakan acak kembali.`);
+    }
+
+    // --- 2. LOGIKA ROTASI LAYER ---
+    let scrambleHistory = [];
+    let isSolvingActive = false;
+
+    const moveExplanations = {
+      "U": "Putar Atas (White) searah jarum jam",
+      "U'": "Putar Atas (White) berlawanan jarum jam",
+      "D": "Putar Bawah (Yellow) searah jarum jam",
+      "D'": "Putar Bawah (Yellow) berlawanan jarum jam",
+      "L": "Putar Kiri (Orange) ke bawah",
+      "L'": "Putar Kiri (Orange) ke atas",
+      "R": "Putar Kanan (Red) ke atas",
+      "R'": "Putar Kanan (Red) ke bawah",
+      "F": "Putar Depan (Green) searah jarum jam",
+      "F'": "Putar Depan (Green) berlawanan jarum jam",
+      "B": "Putar Belakang (Blue) searah jarum jam",
+      "B'": "Putar Belakang (Blue) berlawanan jarum jam",
+      "Uw": "Putar 2 Layer Atas",
+      "Uw'": "Putar 2 Layer Atas (Berlawanan)",
+      "Rw": "Putar 2 Layer Kanan ke Atas",
+      "Rw'": "Putar 2 Layer Kanan ke Bawah",
+      "Fw": "Putar 2 Layer Depan",
+      "Fw'": "Putar 2 Layer Depan (Berlawanan)"
+    };
+
+    function rotateLayer(axis, layerValue, dir) {
+      const angle = (Math.PI / 2) * dir;
+      const rotationMatrix = new THREE.Matrix4();
+
+      if (axis === 'x') rotationMatrix.makeRotationX(angle);
+      if (axis === 'y') rotationMatrix.makeRotationY(angle);
+      if (axis === 'z') rotationMatrix.makeRotationZ(angle);
+
+      cubelets.forEach(cube => {
+        let isMatch = false;
+
+        if (currentMode === 3) {
+          isMatch = Math.abs(cube.position[axis] - layerValue) < 0.2;
+        } else if (currentMode === 2) {
+          isMatch = layerValue > 0 ? cube.position[axis] > 0.1 : cube.position[axis] < -0.1;
+        } else if (currentMode === 4) {
+          if (Math.abs(layerValue) === 2) {
+            isMatch = layerValue > 0 ? cube.position[axis] > 0 : cube.position[axis] < 0;
+          } else {
+            isMatch = Math.abs(cube.position[axis] - layerValue) < 0.3;
+          }
+        } else if (currentMode === 5) {
+          if (Math.abs(layerValue) === 2) {
+            isMatch = layerValue > 0 ? cube.position[axis] > 0.1 : cube.position[axis] < -0.1;
+          } else {
+            isMatch = Math.abs(cube.position[axis] - layerValue) < 0.25;
+          }
+        }
+
+        if (isMatch) {
+          cube.position.applyMatrix4(rotationMatrix);
+          cube.rotateOnWorldAxis(new THREE.Vector3(axis === 'x' ? 1 : 0, axis === 'y' ? 1 : 0, axis === 'z' ? 1 : 0), angle);
+          
+          cube.position.x = Number(cube.position.x.toFixed(2));
+          cube.position.y = Number(cube.position.y.toFixed(2));
+          cube.position.z = Number(cube.position.z.toFixed(2));
+        }
+      });
+    }
+
+    function executeMove(move) {
+      let outerVal = 1;
+      if (currentMode === 4) outerVal = 1.2;
+      if (currentMode === 5) outerVal = 1.3;
+
+      switch(move) {
+        case "U":   rotateLayer('y', outerVal, -1); break;
+        case "U'":  rotateLayer('y', outerVal, 1);  break;
+        case "D":   rotateLayer('y', -outerVal, 1); break;
+        case "D'":  rotateLayer('y', -outerVal, -1);break;
+        case "L":   rotateLayer('x', -outerVal, 1); break;
+        case "L'":  rotateLayer('x', -outerVal, -1);break;
+        case "R":   rotateLayer('x', outerVal, -1); break;
+        case "R'":  rotateLayer('x', outerVal, 1);  break;
+        case "F":   rotateLayer('z', outerVal, -1); break;
+        case "F'":  rotateLayer('z', outerVal, 1);  break;
+        case "B":   rotateLayer('z', -outerVal, 1); break;
+        case "B'":  rotateLayer('z', -outerVal, -1);break;
+        case "Uw":  rotateLayer('y', 2, -1); break;
+        case "Uw'": rotateLayer('y', 2, 1);  break;
+        case "Rw":  rotateLayer('x', 2, -1); break;
+        case "Rw'": rotateLayer('x', 2, 1);  break;
+        case "Fw":  rotateLayer('z', 2, -1); break;
+        case "Fw'": rotateLayer('z', 2, 1);  break;
+      }
+    }
+
+    // --- 3. SPEECH & VOICE RECOGNITION ---
+    function aiSpeak(text, onEndCallback = null) {
+      document.getElementById('speech-bubble').innerText = text;
+      const avatar = document.getElementById('avatar');
+
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'id-ID';
+        utterance.rate = 1.0;
+
+        utterance.onstart = () => avatar.classList.add('speaking');
+        utterance.onend = () => {
+          avatar.classList.remove('speaking');
+          if (onEndCallback) onEndCallback();
+        };
+
+        window.speechSynthesis.speak(utterance);
+      } else if (onEndCallback) {
+        setTimeout(onEndCallback, 2000);
+      }
+    }
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    let recognition = SpeechRecognition ? new SpeechRecognition() : null;
+
+    if (recognition) {
+      recognition.lang = 'id-ID';
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      
+      recognition.onstart = () => {
+        document.getElementById('avatar').classList.add('listening');
+        document.getElementById('status-title').innerText = "AI MENDENGARKAN...";
+      };
+
+      recognition.onresult = (event) => {
+        const rawTranscript = event.results[0][0].transcript.toLowerCase();
+        document.getElementById('avatar').classList.remove('listening');
+        document.getElementById('status-title').innerText = "AI ASSISTANT:";
+
+        const transcript = rawTranscript.replace(/\*/g, 'x');
+
+        const is2x2 = /2\s*x\s*2|2\s*kali\s*2|dua\s*kali\s*dua|dua\s*x\s*dua|22/i.test(transcript);
+        const is3x3 = /3\s*x\s*3|3\s*kali\s*3|tiga\s*kali\s*tiga|tiga\s*x\s*tiga|33/i.test(transcript);
+        const is4x4 = /4\s*x\s*4|4\s*kali\s*4|empat\s*kali\s*empat|empat\s*x\s*empat|44/i.test(transcript);
+        const is5x5 = /5\s*x\s*5|5\s*kali\s*5|lima\s*kali\s*lima|lima\s*x\s*lima|55|lima/i.test(transcript);
+
+        if (is5x5) {
+          switchRubikMode(5);
+        } else if (is4x4) {
+          switchRubikMode(4);
+        } else if (is2x2 && !is3x3) {
+          switchRubikMode(2);
+        } else if (is3x3 && !is2x2) {
+          switchRubikMode(3);
+        } else if (transcript.includes('acak') || transcript.includes('putar')) {
+          scrambleRubik();
+        } else if (transcript.includes('selesai') || transcript.includes('solusi') || transcript.includes('selesaikan')) {
+          runSolver();
+        } else {
+          aiSpeak(`Kamu bilang "${rawTranscript}". Coba katakan "Rubik lima kali lima", "tiga kali tiga", atau "acak".`);
+        }
+      };
+
+      recognition.onerror = (event) => {
+        document.getElementById('avatar').classList.remove('listening');
+        document.getElementById('status-title').innerText = "AI ASSISTANT:";
+        console.error("Speech Recognition Error:", event.error);
+      };
+
+      recognition.onend = () => {
+        document.getElementById('avatar').classList.remove('listening');
+      };
+    }
+
+    function toggleListening() {
+      if (!recognition) return alert("Browser tidak mendukung Web Speech API.");
+      if (!isSolvingActive) {
+        try {
+          recognition.start();
+        } catch(e) {
+          recognition.stop();
+          setTimeout(() => recognition.start(), 200);
+        }
+      }
+    }
+
+    // --- 4. CONTROLLER LOGIC ---
+    function scrambleRubik() {
+      if (isSolvingActive) return;
+      
+      let MOVES;
+      if (currentMode === 3) MOVES = ["U", "D", "L", "R", "F", "B"];
+      else if (currentMode === 2) MOVES = ["U", "R", "F"];
+      else if (currentMode === 4) MOVES = ["U", "D", "L", "R", "F", "B", "Uw", "Rw", "Fw"];
+      else if (currentMode === 5) MOVES = ["U", "D", "L", "R", "F", "B", "Uw", "Rw", "Fw"];
+
+      scrambleHistory = [];
+      const count = currentMode === 5 ? 10 : (currentMode === 4 ? 8 : (currentMode === 3 ? 5 : 4));
+
+      for (let i = 0; i < count; i++) {
+        let randomMove = MOVES[Math.floor(Math.random() * MOVES.length)];
+        scrambleHistory.push(randomMove);
+        executeMove(randomMove);
+      }
+
+      aiSpeak(`Rubik ${currentMode}x${currentMode} berhasil diacak dengan ${count} langkah.`);
+    }
+
+    function runSolver() {
+      if (scrambleHistory.length === 0) {
+        aiSpeak("Rubik ini sudah dalam keadaan selesai!");
+        return;
+      }
+      if (isSolvingActive) return;
+
+      const reverseMap = { 
+        "U": "U'", "U'": "U", 
+        "D": "D'", "D'": "D", 
+        "L": "L'", "L'": "L", 
+        "R": "R'", "R'": "R", 
+        "F": "F'", "F'": "F", 
+        "B": "B'", "B'": "B",
+        "Uw": "Uw'", "Uw'": "Uw",
+        "Rw": "Rw'", "Rw'": "Rw",
+        "Fw": "Fw'", "Fw'": "Fw"
+      };
+
+      let solutionMoves = scrambleHistory.slice().reverse().map(m => reverseMap[m]);
+      scrambleHistory = [];
+      isSolvingActive = true;
+
+      aiSpeak(`Ada ${solutionMoves.length} langkah penyelesaian. Mari kita mulai.`, () => {
+        executeStep(solutionMoves, 0);
+      });
+    }
+
+    function executeStep(moves, index) {
+      if (index >= moves.length) {
+        aiSpeak("Hore! Rubik sudah berhasil kembali sempurna ke kondisi awal!");
+        isSolvingActive = false;
+        return;
+      }
+
+      let move = moves[index];
+      let exp = moveExplanations[move] || move;
+
+      aiSpeak(`Langkah ${index + 1}: ${exp}`, () => {
+        executeMove(move);
+        setTimeout(() => executeStep(moves, index + 1), 600);
+      });
+    }
+  </script>
+</body>
+</html>
